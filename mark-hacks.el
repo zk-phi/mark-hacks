@@ -30,7 +30,7 @@
 (make-variable-buffer-local 'mark-hacks--oneshot-snippet)
 
 (defun mark-hacks-register-set-mark-command (fn)
-  (eval `(defadvice ,fn (around mark-hacks-set-mark activate)
+  (eval `(define-advice ,fn (:around (fn &rest args) mark-hacks-set-mark)
            (cond ((and mark-hacks-enable-visible-register
                        (eq this-command last-command))
                   (deactivate-mark)
@@ -48,10 +48,10 @@
                   (setq this-command 'exchange-point-and-mark)
                   (exchange-point-and-mark))
                  (t
-                  ad-do-it)))))
+                  (apply fn args))))))
 
 (defun mark-hacks-register-yank-command (fn)
-  (eval `(defadvice ,fn (around mark-hacks-yank activate)
+  (eval `(define-advice ,fn (:around (fn &rest args) mark-hacks-yank)
            (cond ((and mark-hacks-enable-swap-region
                        (eq last-command 'kill-region))
                   (setq mark-hacks--swap-pending-overlay
@@ -63,7 +63,7 @@
                     (delete-overlay mark-hacks--swap-pending-overlay)
                     (setq mark-hacks--swap-pending-overlay nil))
                   (let* ((beg (point))
-                         (end (progn ad-do-it (point))))
+                         (end (progn (apply fn args) (point))))
                     (when (and mark-hacks-enable-auto-indent
                                (not (cl-some 'derived-mode-p
                                              mark-hacks-auto-indent-inhibit-modes)))
@@ -75,7 +75,7 @@
                              (sit-for 0.5))))))))))
 
 (defun mark-hacks-register-kill-command (fn)
-  (eval `(defadvice ,fn (around mark-hacks-kill activate)
+  (eval `(define-advice ,fn (:around (fn &rest args) mark-hacks-kill)
            (cond (mark-hacks--swap-pending-overlay
                   (let* ((str (buffer-substring (region-beginning) (region-end)))
                          (pending-pos (overlay-start mark-hacks--swap-pending-overlay))
@@ -88,7 +88,7 @@
                     (insert str)
                     (goto-char pos)))
                  (t
-                  ad-do-it))
+                  (apply fn args)))
            (setq this-command 'kill-region))))
 
 (defun mark-hacks-expand-oneshot-snippet ()
@@ -101,7 +101,7 @@
          (message "yasnippet not installed"))))
 
 (defun mark-hacks-register-copy-command (fn)
-  (eval `(defadvice ,fn (around mark-hacks-copy activate)
+  (eval `(define-advice ,fn (:around (fn &rest args) mark-hacks-copy)
            (cond ((and (called-interactively-p 'any)
                        mark-hacks-enable-oneshot-yasnippet
                        (eq last-command this-command))
@@ -112,6 +112,6 @@
                     (deactivate-mark)
                     (mark-hacks-expand-oneshot-snippet)))
                  (t
-                  ad-do-it)))))
+                  (apply fn args))))))
 
 (provide 'mark-hacks)
