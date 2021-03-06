@@ -1,3 +1,5 @@
+;;; -*- lexical-binding: t -*-
+
 (require 'cl-lib)
 (autoload 'yas-expand-snippet "yasnippet")
 
